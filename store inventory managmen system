@@ -1,0 +1,481 @@
+#include <iostream>
+
+// Class to represent an inventory item
+class Item {
+private:
+    int id;
+    std::string name;
+    double price;
+    int quantity;
+    std::string category;
+
+public:
+    // Constructor
+    Item(int _id, std::string _name, double _price, int _quantity, std::string _category)
+        : id(_id), name(_name), price(_price), quantity(_quantity), category(_category) {}
+
+    // Getters
+    int getId() const { return id; }
+    std::string getName() const { return name; }
+    double getPrice() const { return price; }
+    int getQuantity() const { return quantity; }
+    std::string getCategory() const { return category; }
+
+    // Setters
+    void setPrice(double _price) { price = _price; }
+    void setQuantity(int _quantity) { quantity = _quantity; }
+};
+
+// Class to manage the inventory
+class InventoryManager {
+private:
+    std::vector<Item> items;
+    std::string filename;
+    int next_id;
+
+public:
+    // Constructor
+    InventoryManager(std::string _filename = "inventory.txt") : filename(_filename), next_id(1) {
+        loadInventory();
+    }
+
+    // Add item to inventory
+    bool addItem(std::string name, double price, int quantity, std::string category) {
+        // Validate input
+        if (price < 0 || quantity < 0) {
+            return false;
+        }
+
+        // Create and add new item
+        items.push_back(Item(next_id++, name, price, quantity, category));
+        saveInventory();
+        return true;
+    }
+
+    // Display all items
+    void displayInventory() {
+        if (items.empty()) {
+            std::cout << "Inventory is empty." << std::endl;
+            return;
+        }
+
+        std::cout << std::left << std::setw(5) << "ID"
+                  << std::setw(20) << "Name"
+                  << std::setw(10) << "Price"
+                  << std::setw(10) << "Quantity"
+                  << std::setw(15) << "Category" << std::endl;
+        std::cout << std::string(60, '-') << std::endl;
+
+        for (const auto& item : items) {
+            std::cout << std::left << std::setw(5) << item.getId()
+                      << std::setw(20) << item.getName()
+                      << "$" << std::fixed << std::setprecision(2) << std::setw(9) << item.getPrice()
+                      << std::setw(10) << item.getQuantity()
+                      << std::setw(15) << item.getCategory() << std::endl;
+        }
+    }
+
+    // Update price of an item by ID
+    bool updatePrice(int id, double new_price) {
+        if (new_price < 0) {
+            return false;
+        }
+
+        for (auto& item : items) {
+            if (item.getId() == id) {
+                item.setPrice(new_price);
+                saveInventory();
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // Update quantity of an item by ID
+    bool updateQuantity(int id, int new_quantity) {
+        if (new_quantity < 0) {
+            return false;
+        }
+
+        for (auto& item : items) {
+            if (item.getId() == id) {
+                item.setQuantity(new_quantity);
+                saveInventory();
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // Remove item by ID
+    bool removeItem(int id) {
+        for (auto it = items.begin(); it != items.end(); ++it) {
+            if (it->getId() == id) {
+                items.erase(it);
+                saveInventory();
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // Search for items by name (partial match)
+    void searchByName(std::string search_term) {
+        bool found = false;
+
+        std::cout << "\nSearch results for '" << search_term << "':" << std::endl;
+        std::cout << std::string(60, '-') << std::endl;
+
+        for (const auto& item : items) {
+            if (item.getName().find(search_term) != std::string::npos) {
+                if (!found) {
+                    std::cout << std::left << std::setw(5) << "ID"
+                              << std::setw(20) << "Name"
+                              << std::setw(10) << "Price"
+                              << std::setw(10) << "Quantity"
+                              << std::setw(15) << "Category" << std::endl;
+                    std::cout << std::string(60, '-') << std::endl;
+                    found = true;
+                }
+
+                std::cout << std::left << std::setw(5) << item.getId()
+                          << std::setw(20) << item.getName()
+                          << "$" << std::fixed << std::setprecision(2) << std::setw(9) << item.getPrice()
+                          << std::setw(10) << item.getQuantity()
+                          << std::setw(15) << item.getCategory() << std::endl;
+            }
+        }
+
+        if (!found) {
+            std::cout << "No items found matching '" << search_term << "'." << std::endl;
+        }
+    }
+
+    // Generate low stock report
+    void lowStockReport(int threshold) {
+        bool found = false;
+
+        std::cout << "\nItems with stock below " << threshold << ":" << std::endl;
+        std::cout << std::string(60, '-') << std::endl;
+
+        for (const auto& item : items) {
+            if (item.getQuantity() < threshold) {
+                if (!found) {
+                    std::cout << std::left << std::setw(5) << "ID"
+                              << std::setw(20) << "Name"
+                              << std::setw(10) << "Price"
+                              << std::setw(10) << "Quantity"
+                              << std::setw(15) << "Category" << std::endl;
+                    std::cout << std::string(60, '-') << std::endl;
+                    found = true;
+                }
+
+                std::cout << std::left << std::setw(5) << item.getId()
+                          << std::setw(20) << item.getName()
+                          << "$" << std::fixed << std::setprecision(2) << std::setw(9) << item.getPrice()
+                          << std::setw(10) << item.getQuantity()
+                          << std::setw(15) << item.getCategory() << std::endl;
+            }
+        }
+
+        if (!found) {
+            std::cout << "No items with stock below " << threshold << "." << std::endl;
+        }
+    }
+
+    // Calculate total inventory value
+    double calculateTotalValue() {
+        double total = 0.0;
+        for (const auto& item : items) {
+            total += item.getPrice() * item.getQuantity();
+        }
+        return total;
+    }
+
+private:
+    // Save inventory to file
+    void saveInventory() {
+        std::ofstream file(filename);
+        if (!file) {
+            std::cerr << "Error: Could not open file for writing." << std::endl;
+            return;
+        }
+
+        file << next_id << std::endl;  // Save next_id at the top of the file
+
+        for (const auto& item : items) {
+            file << item.getId() << "|"
+                 << item.getName() << "|"
+                 << item.getPrice() << "|"
+                 << item.getQuantity() << "|"
+                 << item.getCategory() << std::endl;
+        }
+
+        file.close();
+    }
+
+    // Load inventory from file
+    void loadInventory() {
+        std::ifstream file(filename);
+        if (!file) {
+            std::cout << "No existing inventory file. Creating new inventory." << std::endl;
+            return;
+        }
+
+        items.clear();
+
+        // Read next_id from the first line
+        file >> next_id;
+        file.ignore(); // Skip newline
+
+        std::string line;
+        while (std::getline(file, line)) {
+            if (line.empty()) continue;
+
+            int id;
+            std::string name;
+            double price;
+            int quantity;
+            std::string category;
+
+            // Parse the line
+            size_t pos = 0;
+            std::string token;
+
+            // Extract ID
+            pos = line.find('|');
+            if (pos == std::string::npos) continue;
+            id = std::stoi(line.substr(0, pos));
+            line.erase(0, pos + 1);
+
+            // Extract name
+            pos = line.find('|');
+            if (pos == std::string::npos) continue;
+            name = line.substr(0, pos);
+            line.erase(0, pos + 1);
+
+            // Extract price
+            pos = line.find('|');
+            if (pos == std::string::npos) continue;
+            price = std::stod(line.substr(0, pos));
+            line.erase(0, pos + 1);
+
+            // Extract quantity
+            pos = line.find('|');
+            if (pos == std::string::npos) continue;
+            quantity = std::stoi(line.substr(0, pos));
+            line.erase(0, pos + 1);
+
+            // Extract category
+            category = line;
+
+            // Add item to inventory
+            items.push_back(Item(id, name, price, quantity, category));
+        }
+
+        file.close();
+        std::cout << "Inventory loaded successfully." << std::endl;
+    }
+};
+
+// Clear the console screen
+void clearScreen() {
+    #ifdef _WIN32
+        system("cls");
+    #else
+        system("clear");
+    #endif
+}
+
+// Wait for user to press Enter
+void waitForEnter() {
+    std::cout << "\nPress Enter to continue...";
+    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+}
+
+// Main function
+int main() {
+    InventoryManager manager;
+    int choice;
+    bool running = true;
+
+    while (running) {
+        clearScreen();
+        std::cout << "=== STORE INVENTORY SYSTEM ===" << std::endl;
+        std::cout << "1. View All Items" << std::endl;
+        std::cout << "2. Add New Item" << std::endl;
+        std::cout << "3. Update Item Price" << std::endl;
+        std::cout << "4. Update Item Quantity" << std::endl;
+        std::cout << "5. Remove Item" << std::endl;
+        std::cout << "6. Search Items" << std::endl;
+        std::cout << "7. Low Stock Report" << std::endl;
+        std::cout << "8. Calculate Total Value" << std::endl;
+        std::cout << "0. Exit" << std::endl;
+        std::cout << "Choose an option: ";
+
+        // Validate input is an integer
+        if (!(std::cin >> choice)) {
+            std::cin.clear();
+            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+            std::cout << "Invalid input. Please enter a number." << std::endl;
+            waitForEnter();
+            continue;
+        }
+
+        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+
+        switch (choice) {
+            case 1: {
+                clearScreen();
+                std::cout << "=== VIEW ALL ITEMS ===" << std::endl;
+                manager.displayInventory();
+                waitForEnter();
+                break;
+            }
+            case 2: {
+                clearScreen();
+                std::cout << "=== ADD NEW ITEM ===" << std::endl;
+
+                std::string name, category;
+                double price;
+                int quantity;
+
+                std::cout << "Enter item name: ";
+                std::getline(std::cin, name);
+
+                std::cout << "Enter price: $";
+                std::cin >> price;
+
+                std::cout << "Enter quantity: ";
+                std::cin >> quantity;
+
+                std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+
+                std::cout << "Enter category: ";
+                std::getline(std::cin, category);
+
+                if (manager.addItem(name, price, quantity, category)) {
+                    std::cout << "Item added successfully!" << std::endl;
+                } else {
+                    std::cout << "Failed to add item. Please check your inputs." << std::endl;
+                }
+
+                waitForEnter();
+                break;
+            }
+            case 3: {
+                clearScreen();
+                std::cout << "=== UPDATE ITEM PRICE ===" << std::endl;
+                manager.displayInventory();
+
+                int id;
+                double new_price;
+
+                std::cout << "\nEnter item ID: ";
+                std::cin >> id;
+
+                std::cout << "Enter new price: $";
+                std::cin >> new_price;
+
+                if (manager.updatePrice(id, new_price)) {
+                    std::cout << "Price updated successfully!" << std::endl;
+                } else {
+                    std::cout << "Failed to update price. Item not found or invalid price." << std::endl;
+                }
+
+                waitForEnter();
+                break;
+            }
+            case 4: {
+                clearScreen();
+                std::cout << "=== UPDATE ITEM QUANTITY ===" << std::endl;
+                manager.displayInventory();
+
+                int id, new_quantity;
+
+                std::cout << "\nEnter item ID: ";
+                std::cin >> id;
+
+                std::cout << "Enter new quantity: ";
+                std::cin >> new_quantity;
+
+                if (manager.updateQuantity(id, new_quantity)) {
+                    std::cout << "Quantity updated successfully!" << std::endl;
+                } else {
+                    std::cout << "Failed to update quantity. Item not found or invalid quantity." << std::endl;
+                }
+
+                waitForEnter();
+                break;
+            }
+            case 5: {
+                clearScreen();
+                std::cout << "=== REMOVE ITEM ===" << std::endl;
+                manager.displayInventory();
+
+                int id;
+
+                std::cout << "\nEnter item ID to remove: ";
+                std::cin >> id;
+
+                if (manager.removeItem(id)) {
+                    std::cout << "Item removed successfully!" << std::endl;
+                } else {
+                    std::cout << "Failed to remove item. Item not found." << std::endl;
+                }
+
+                waitForEnter();
+                break;
+            }
+            case 6: {
+                clearScreen();
+                std::cout << "=== SEARCH ITEMS ===" << std::endl;
+
+                std::string search_term;
+                std::cout << "Enter search term: ";
+                std::getline(std::cin, search_term);
+
+                manager.searchByName(search_term);
+
+                waitForEnter();
+                break;
+            }
+            case 7: {
+                clearScreen();
+                std::cout << "=== LOW STOCK REPORT ===" << std::endl;
+
+                int threshold;
+                std::cout << "Enter threshold quantity: ";
+                std::cin >> threshold;
+
+                manager.lowStockReport(threshold);
+
+                waitForEnter();
+                break;
+            }
+            case 8: {
+                clearScreen();
+                std::cout << "=== TOTAL INVENTORY VALUE ===" << std::endl;
+
+                double total_value = manager.calculateTotalValue();
+                std::cout << "Total inventory value: $" << std::fixed << std::setprecision(2) << total_value << std::endl;
+
+                waitForEnter();
+                break;
+            }
+            case 0: {
+                std::cout << "Exiting program..." << std::endl;
+                running = false;
+                break;
+            }
+            default: {
+                std::cout << "Invalid option. Please try again." << std::endl;
+                waitForEnter();
+                break;
+            }
+        }
+    }
+
+    return 0;
+}
+
