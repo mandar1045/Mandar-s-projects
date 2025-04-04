@@ -1,1 +1,1 @@
-# Mandar-s-projects
+store invdntory managment 
