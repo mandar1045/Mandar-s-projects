@@ -1,1 +1,1 @@
-store invdntory managment 
+ 
